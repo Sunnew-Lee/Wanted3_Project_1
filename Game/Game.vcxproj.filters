@@ -27,19 +27,10 @@
     <ClCompile Include="Actor\Player.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Actor\PlayerBullet.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Actor\Enemy.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Actor\EnemyBullet.cpp">
+    <ClCompile Include="Actor\Pipe.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Utils\Timer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Actor\EnemyDestroyEffect.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -53,19 +44,10 @@
     <ClInclude Include="Actor\Player.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Actor\PlayerBullet.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Actor\Enemy.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Actor\EnemyBullet.h">
+    <ClInclude Include="Actor\Pipe.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Utils\Timer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Actor\EnemyDestroyEffect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

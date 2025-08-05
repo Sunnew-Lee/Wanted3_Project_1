@@ -21,8 +21,8 @@ ScreenBuffer::ScreenBuffer(const Vector2& screenSize)
 		return;
 	}
 
-	// 콘솔 창 크기 설정.
-	SMALL_RECT rect{ 0, 0, (short)screenSize.x, (short)screenSize.y };
+	// 콘솔 창 크기 설정. -1씩 한 이유는 화면 버퍼보다 -1이 최대이기 때문
+	SMALL_RECT rect{ 0, 0, (short)screenSize.x - 1, (short)screenSize.y - 1 };
 	BOOL setWindowsInfoResult = SetConsoleWindowInfo(buffer, true, &rect);
 	if (!setWindowsInfoResult)
 	{
@@ -31,32 +31,7 @@ ScreenBuffer::ScreenBuffer(const Vector2& screenSize)
 	}
 
 	// 콘솔 버퍼 크기 설정.
-	BOOL setScreenBufferSizeResult = SetConsoleScreenBufferSize(buffer, Vector2(screenSize.x + 1, screenSize.y + 1));
-	if (!setScreenBufferSizeResult)
-	{
-		std::cerr << "Failed to set screen buffer size\n";
-		__debugbreak();
-	}
-
-	// 커서 안보이게 설정.
-	CONSOLE_CURSOR_INFO info{ 1, FALSE };
-	SetConsoleCursorInfo(buffer, &info);
-}
-
-ScreenBuffer::ScreenBuffer(HANDLE console, const Vector2& screenSize)
-	: screenSize(screenSize), buffer(console)
-{
-	// 콘솔 창 크기 설정.
-	SMALL_RECT rect{ 0, 0, (short)screenSize.x, (short)screenSize.y };
-	BOOL setWindowsInfoResult = SetConsoleWindowInfo(buffer, true, &rect);
-	if (!setWindowsInfoResult)
-	{
-		std::cerr << "Failed to set console window size\n";
-		__debugbreak();
-	}
-
-	// 콘솔 버퍼 크기 설정.
-	BOOL setScreenBufferSizeResult = SetConsoleScreenBufferSize(buffer, Vector2(screenSize.x + 1, screenSize.y + 1));
+	BOOL setScreenBufferSizeResult = SetConsoleScreenBufferSize(buffer, Vector2(screenSize.x, screenSize.y));
 	if (!setScreenBufferSizeResult)
 	{
 		std::cerr << "Failed to set screen buffer size\n";
@@ -66,6 +41,43 @@ ScreenBuffer::ScreenBuffer(HANDLE console, const Vector2& screenSize)
 	// 커서 안보이게 설정.
 	CONSOLE_CURSOR_INFO cursorInfo{ 1, FALSE };
 	SetConsoleCursorInfo(buffer, &cursorInfo);
+}
+
+ScreenBuffer::ScreenBuffer(HANDLE console, const Vector2& screenSize)
+	: screenSize(screenSize), buffer(console)
+{
+	// 콘솔 창 크기 설정. -1씩 한 이유는 화면 버퍼보다 -1이 최대이기 때문
+	SMALL_RECT rect{ 0, 0, (short)screenSize.x - 1, (short)screenSize.y - 1 };
+	BOOL setWindowsInfoResult = SetConsoleWindowInfo(buffer, true, &rect);
+	if (!setWindowsInfoResult)
+	{
+		std::cerr << "Failed to set console window size\n";
+		__debugbreak();
+	}
+
+	// 콘솔 버퍼 크기 설정.
+	BOOL setScreenBufferSizeResult = SetConsoleScreenBufferSize(buffer, Vector2(screenSize.x, screenSize.y));
+	if (!setScreenBufferSizeResult)
+	{
+		std::cerr << "Failed to set screen buffer size\n";
+		__debugbreak();
+	}
+
+	// 커서 안보이게 설정.
+	CONSOLE_CURSOR_INFO cursorInfo{ 1, FALSE };
+	SetConsoleCursorInfo(buffer, &cursorInfo);
+
+	//CONSOLE_FONT_INFOEX cfi;
+	//BOOL b = GetCurrentConsoleFontEx(buffer, FALSE, &cfi);
+	////cfi.dwFontSize.X/=2;
+	//cfi.dwFontSize.Y/=2;
+	//BOOL a = SetCurrentConsoleFontEx(buffer, FALSE, &cfi);
+	//if (!a)
+	//{
+	//	std::cout << "폰트 정보 설정 실패!" << std::endl;
+	//	return ;
+	//}
+	
 
 	// 1. 콘솔 윈도우 핸들(HWND)을 가져옵니다.
 //    (버퍼를 제어하는 HANDLE과 다른, 창 자체를 가리키는 핸들입니다.)
@@ -100,7 +112,7 @@ void ScreenBuffer::Clear()
 
 	// 화면 버퍼 전체에 빈 문자열 기록.
 	// 콘솔 전체에 한 글자를 입력할 때 사용 (memset과 비슷).
-	FillConsoleOutputCharacter(buffer, ' ', (screenSize.x + 1) * screenSize.y + 1, position, &writtenCount);
+	FillConsoleOutputCharacter(buffer, ' ', screenSize.x * screenSize.y, position, &writtenCount);
 }
 
 void ScreenBuffer::Render(CHAR_INFO* charInfo)
@@ -109,6 +121,7 @@ void ScreenBuffer::Render(CHAR_INFO* charInfo)
 	Vector2 bufferPosition;
 
 	// 기록할 영역의 크기.
+	//todo: why -1 -1??
 	SMALL_RECT writeRegion{ 0, 0, (short)screenSize.x - 1, (short)screenSize.y - 1 };
 
 	// 전달된 문자 정보를 버퍼에 기록.

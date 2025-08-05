@@ -46,11 +46,9 @@ Engine::Engine()
 
 	// 이미지 버퍼 생성 / 콘솔에 보낼 버퍼 생성.
 	Vector2 screenSize(settings.width, settings.height);
-	//imageBuffer = new CHAR_INFO[(screenSize.x + 1) * screenSize.y + 1];
-	//imageBuffer = new ImageBuffer[(screenSize.x + 1) * screenSize.y + 1];
-	imageBuffer = new ImageBuffer((screenSize.x + 1) * screenSize.y + 1);
-	//charInfo = new CHAR_INFO[(screenSize.x + 1) * screenSize.y + 1];
-	bgBuffer = new ImageBuffer((screenSize.x + 1) * screenSize.y + 1);
+
+	imageBuffer = new ImageBuffer(screenSize.x * screenSize.y);
+	bgBuffer = new ImageBuffer(screenSize.x * screenSize.y);
 
 	// 버퍼 초기화 (문자 버퍼).
 	//ClearImageBuffer();
@@ -141,18 +139,19 @@ void Engine::Run()
 	}
 
 	// 정리(텍스트 색상 원래대로 돌려놓기).
-	Utils::SetConsoleTextColor(
-		FOREGROUND_BLUE | FOREGROUND_GREEN | FOREGROUND_RED
-	);
+	Utils::SetConsoleTextColor(Color::White);
 }
 
+//pos -> 왼쪽 위 시작 개행 만나면 늘 아래로 내리기
 void Engine::WriteToBuffer(
 	const Vector2& position,
 	const char* image,
+	int width, int height,
+	Color bg,
 	Color color,
 	int sortingOrder)
 {
-	int length = static_cast<int>(strlen(image));
+	//int length = static_cast<int>(strlen(image));
 
 	// 1. 소스(image)에서 읽기 시작할 인덱스 계산
 	// position.x가 -3이라면, image의 0, 1, 2번 인덱스는 화면 밖에 있으므로 3번부터 읽어야 함.
@@ -171,11 +170,15 @@ void Engine::WriteToBuffer(
 	// (전체 길이) - (왼쪽에서 잘리는 개수) - (오른쪽에서 잘리는 개수)
 	int charsCutFromLeft = sourceStartIndex;
 	int charsCutFromRight = 0;
-	if (position.x + length > settings.width)
+
+	// 오른쪽으로 짤림
+	if (position.x + width > settings.width)
 	{
-		charsCutFromRight = (position.x + length) - settings.width;
+		charsCutFromRight = (position.x + width) - settings.width;
 	}
-	int charsToDraw = length - charsCutFromLeft -charsCutFromRight;
+
+	// todo: 양쪽 다 짤리면 중간만 그려지는지?
+	int charsToDraw = width - charsCutFromLeft -charsCutFromRight;
 
 	// 그릴 문자가 하나도 없으면 함수 종료
 	if (charsToDraw <= 0)
@@ -184,28 +187,32 @@ void Engine::WriteToBuffer(
 	}
 
 	// 4. 계산된 값들을 이용해 버퍼에 직접 기록
-	for (int i = 0; i < charsToDraw; ++i)
+	//int y{ 0 };
+	for (int y{ 0 }; y < height; ++y)
 	{
-		// 버퍼에 기록할 최종 인덱스
-		int destIndex = (position.y * settings.width) + destStartX + i;
-
-		// @Incomplete: 화면 버퍼 크기 안 넘어가게 예외처리 필요함.
-		// 추가로 y좌표가 화면 밖을 벗어나는 경우도 체크하면 더 안정적입니다.
-		if (destIndex < 0 || destIndex >= (settings.width * settings.height))
+		for (int i = 0; i < charsToDraw; ++i)
 		{
-			continue;
-		}
+			// 버퍼에 기록할 최종 인덱스
+			int destIndex = ((position.y + y) * settings.width) + destStartX + i;
 
-		// 뎁스 테스트
-		if (imageBuffer->sortingOrderArray[destIndex] > sortingOrder)
-		{
-			continue;
-		}
+			// @Incomplete: 화면 버퍼 크기 안 넘어가게 예외처리 필요함.
+			// 추가로 y좌표가 화면 밖을 벗어나는 경우도 체크하면 더 안정적입니다.
+			if (destIndex < 0 || destIndex >= (settings.width * settings.height))
+			{
+				continue;
+			}
 
-		// 원본 이미지에서 올바른 문자를 직접 읽어와 버퍼에 기록
-		imageBuffer->charInfoArray[destIndex].Char.AsciiChar = image[sourceStartIndex + i];
-		imageBuffer->charInfoArray[destIndex].Attributes = (WORD)color;
-		imageBuffer->sortingOrderArray[destIndex] = sortingOrder;
+			// 뎁스 테스트
+			if (imageBuffer->sortingOrderArray[destIndex] > sortingOrder)
+			{
+				continue;
+			}
+
+			// 원본 이미지에서 올바른 문자를 직접 읽어와 버퍼에 기록
+			imageBuffer->charInfoArray[destIndex].Char.AsciiChar = image[(width + 1) * y + sourceStartIndex + i];
+			imageBuffer->charInfoArray[destIndex].Attributes = Utils::SetColor(bg, color);
+			imageBuffer->sortingOrderArray[destIndex] = sortingOrder;
+		}
 	}
 }
 
@@ -399,142 +406,88 @@ ScreenBuffer* Engine::GetRenderer() const
 	return renderTargets[currentRenderTargetIndex];
 }
 
-//void Engine::ClearImageBuffer()
-//{
-//	// 글자 버퍼 덮어쓰기.
-//	for (int y = 0; y < settings.height; ++y)
-//	{
-//		for (int x = 0; x < settings.width; ++x)
-//		{
-//			int index = (y * (settings.width)) + x;
-//			CHAR_INFO& buffer = imageBuffer->charInfoArray[index];
-//			buffer.Char.AsciiChar = ' ';
-//			buffer.Attributes = 191;
-//			imageBuffer->sortingOrderArray[index] = -1;
-//		}
-//
-//		// 각 줄 끝에 개행 문자 추가.
-//		int index = (y * (settings.width)) + settings.width;
-//		CHAR_INFO& buffer = imageBuffer->charInfoArray[index];
-//		buffer.Char.AsciiChar = '\n';
-//		buffer.Attributes = 127;
-//		imageBuffer->sortingOrderArray[index] = -1;
-//	}
-//
-//	// 마지막에 널 문자 추가.
-//	int index = (settings.width) * settings.height + 1;
-//	CHAR_INFO& buffer = imageBuffer->charInfoArray[index];
-//	buffer.Char.AsciiChar = '\0';
-//	buffer.Attributes = 31;
-//	imageBuffer->sortingOrderArray[index] = -1;
-//}
-
 void Engine::LoadBgBuffer()
 {
 	FILE* file = nullptr;
+
 	fopen_s(&file, "../Assets/BG.txt", "rt");
 	if (file == nullptr)
 	{
-		std::cout << "Failed to load engine settings.\n";
+		std::cout << "BG Open Failed\n";
 		__debugbreak();
 		return;
 	}
 
-	// 한 줄을 읽어올 버퍼. 크기는 (가로너비 + 줄바꿈문자 + NULL문자)를 고려해 +2
-	char lineBuffer[60 + 2];
-	int y = 0;
+	fseek(file, 0, SEEK_END);
+	size_t fileSize = ftell(file);
+	rewind(file);
 
-	// fgets로 한 줄씩 읽어옴
-	while (fgets(lineBuffer, sizeof(lineBuffer), file))
+	char* fileBuffer = new char[fileSize];
+	size_t readSize = fread(fileBuffer, 1, fileSize, file);
+
+	// i for file traverse, index for bgBuffer traverse(follows i execept if i meets \n, index remains)
+	int size = settings.width * settings.height;
+	for (int i{ 0 }, index{ 0 }; index < size; ++i, ++index)
 	{
-		// 읽어온 줄의 실제 길이만큼만 반복
-		for (int x = 0; x < strlen(lineBuffer); ++x)
+		if (fileBuffer[i] == '\n')
 		{
-			// 만약 개행 문자를 만나면 이 줄의 처리를 중단
-			if (lineBuffer[x] == '\n')
-			{
-				break;
-			}
-
-			// 버퍼 범위를 벗어나면 무시
-			if (x >= settings.width || y >= settings.height) continue;
-
-			int destIndex = (y * settings.width) + x;
-			CHAR_INFO& buffer = bgBuffer->charInfoArray[destIndex];
-
-			switch (lineBuffer[x])
-			{
-			case '-':
-
-				buffer.Char.AsciiChar = '-';
-
-				buffer.Attributes = 7 | (15 << 4);
-
-				break;
-
-			case '$':
-
-				buffer.Char.AsciiChar = ' ';
-
-				buffer.Attributes = (10 << 4);
-
-				break;
-
-			case '^':
-
-				buffer.Char.AsciiChar = '=';
-
-				buffer.Attributes = 2 | (8 << 4);
-
-				break;
-
-			case '/':
-
-				buffer.Char.AsciiChar = '/';
-
-				buffer.Attributes = (10 << 4);
-
-				break;
-
-			case '&':
-
-				buffer.Char.AsciiChar = '@';
-
-				buffer.Attributes = (12 << 4);
-
-				break;
-
-			case '#':
-
-				buffer.Char.AsciiChar = '/';
-
-				buffer.Attributes = (2 << 4);
-
-				break;
-
-			case '.':
-
-				buffer.Char.AsciiChar = ' ';
-
-				buffer.Attributes = (14 << 4);
-
-				break;
-
-			default:
-
-				buffer.Char.AsciiChar = ' ';
-
-				buffer.Attributes = 15 | (11 << 4);
-			}
-			bgBuffer->sortingOrderArray[destIndex] = -1;
+			--index;
+			continue;
 		}
-		// 한 줄 처리가 끝났으므로 y좌표 증가
-		y++;
+
+		CHAR_INFO& buffer = bgBuffer->charInfoArray[index];
+
+		// bgBuffer에 문자와 색 입력
+		switch (fileBuffer[i])
+		{
+		case '-':
+			buffer.Char.AsciiChar = '-';
+			buffer.Attributes = Utils::SetColor(Color::White, Color::IGray);
+			break;
+
+		case '$':
+			buffer.Char.AsciiChar = ' ';
+			buffer.Attributes = Utils::SetColor(Color::IGreen);
+			break;
+
+		case '^':
+			buffer.Char.AsciiChar = '=';
+			buffer.Attributes = Utils::SetColor(Color::Intensity, Color::Green);
+			break;
+
+		case '/':
+			buffer.Char.AsciiChar = '/';
+			buffer.Attributes = 
+				Utils::SetColor(Color::IGreen);
+			break;
+			//todo: ( 대체하기
+		case '(':
+			buffer.Char.AsciiChar = '(';
+			buffer.Attributes = Utils::SetColor(Color::IRed,Color::Red);
+			break;
+
+		case '#':
+			buffer.Char.AsciiChar = '/';
+			buffer.Attributes = Utils::SetColor(Color::Green);
+			break;
+
+		case '.':
+			buffer.Char.AsciiChar = '.';
+			buffer.Attributes = Utils::SetColor(Color::Yellow, Color::IYellow);
+			break;
+
+		default:
+			buffer.Char.AsciiChar = ' ';
+			buffer.Attributes = Utils::SetColor(Color::ICyan, Color::White);
+		}
+		bgBuffer->sortingOrderArray[index] = -1;
 	}
 
+	SafeDeleteArray(fileBuffer);
 	fclose(file);
 }
 
+//todo: timer for bg
 void Engine::SetImageBuffer()
 {
 	// 1. imageBuffer의 모든 픽셀(x, y)을 순회합니다.
@@ -566,6 +519,6 @@ void Engine::SetImageBuffer()
 		}
 	}
 
-	// 5. 다음 프레임을 위해 오프셋을 1 증가시킵니다.
+	//5. 다음 프레임을 위해 오프셋을 1 증가시킵니다.
 	offSet = (offSet + 1) % settings.width;
 }

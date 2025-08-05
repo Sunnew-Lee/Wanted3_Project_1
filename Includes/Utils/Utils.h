@@ -47,6 +47,11 @@ namespace Utils
 		SetConsoleTextColor(static_cast<WORD>(color));
 	}
 
+	inline WORD SetColor(Color bg, Color color = Color::None)
+	{
+		return static_cast<WORD>(color) | (static_cast<WORD>(bg) << 4);
+	}
+
 	// 랜덤 생성 함수.
 	inline int Random(int min, int max)
 	{

@@ -62,8 +62,7 @@ public:
 
 	// 문자열 그리기 요청 함수.
 	void WriteToBuffer(
-		const Vector2& position, const char* image, Color color = Color::White, int sortingOrder = 0
-	);
+		const Vector2& position, const char* image, int width, int height, Color bg = Color::None, Color color = Color::White, int sortingOrder = 0);
 
 	// 버퍼를 곧바로 교환 요청할 때 사용하는 함수.
 	void PresentImmediately();

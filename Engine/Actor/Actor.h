@@ -15,8 +15,11 @@ class Engine_API Actor : public RTTI
 public:
 	Actor(
 		const char* image = "",
+		int width=0, int height=0,
+		Color bg = Color::None,
 		Color color = Color::White,
-		const Vector2& position = Vector2::Zero
+		const Vector2& position = Vector2::Zero,
+		unsigned int sortingOrder = 0
 	);
 	virtual ~Actor();
 
@@ -77,8 +80,14 @@ protected:
 	// 문자열 길이.
 	int width = 0;
 
+	// 문자열 개행갯수 + 1
+	int height = 0;
+
 	// 텍스트 색상 값.
 	Color color;
+
+	// 텍스트 배경 값.
+	Color bg;
 
 	// BeginPlay 호출이 되었는지 확인.
 	bool hasBeganPlay = false;

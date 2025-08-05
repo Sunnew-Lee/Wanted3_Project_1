@@ -32,21 +32,25 @@ private:
 
 	void ShowGameScore();
 
-	void PrintMenu();
+	//void PrintMenu();
 
+	//protected으로 바꿔서 player가 isPlayerDead 접근하도록 해?
 private:
 	// 적 생성 시 시간 계산을 위한 타이머.
 	Timer enemySpawnTimer;
 
 	// 점수 변수.
-	int score = 0;
+	int score = 0;	//00~99
 
 	// 플레이어의 죽음 처리를 위한 변수.
 	bool isPlayerDead = false;
 
 	// 플레이어가 그리는 문자열 길이.
-	int playerWidth = 0;
+	//int playerWidth = 0;
 
 	// 플레이어 죽은 위치.
 	Vector2 playerDeadPosition;
+
+	static constexpr int DIGIT_WIDTH = 5; // 각 숫자의 가로 크기
+	static constexpr int DIGIT_HEIGHT = 5; // 각 숫자의 세로 크기
 };
