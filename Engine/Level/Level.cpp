@@ -157,6 +157,24 @@ void Level::ProcessAddAndDestroyActors()
 	addRequstedActors.clear();
 }
 
+bool Level::GetisCleared() const
+{
+	return isCleared;
+}
+
+void Level::Reset()
+{
+	for (auto*& actor : actors)
+	{
+		SafeDelete(actor);
+	}
+
+	actors.clear();
+	addRequstedActors.clear();
+	destroyRequstedActors.clear();
+	isCleared = false;
+}
+
 void Level::SortActorsBySortingOrder()
 {
 	// 버블 정렬.

@@ -23,9 +23,13 @@ public:
 	virtual void BeginPlay();
 	virtual void Tick(float deltaTime);
 	virtual void Render();
+	virtual void Reset();
 
 	// 추가 및 삭제 요청된 액터를 처리하는 함수.
 	void ProcessAddAndDestroyActors();
+
+	bool GetisCleared() const;
+	
 
 private:
 	void SortActorsBySortingOrder();
@@ -39,4 +43,6 @@ protected:
 
 	// 삭제 요청된 액터를 관리하는 배열.
 	std::vector<Actor*> destroyRequstedActors;
+	
+	bool isCleared{ false };
 };

@@ -7,6 +7,7 @@
 
 // 전방 선언.
 class Level;
+
 class Engine_API Actor : public RTTI
 {
 	friend class Level;
@@ -18,8 +19,8 @@ public:
 		int width=0, int height=0,
 		Color bg = Color::None,
 		Color color = Color::White,
-		const Vector2& position = Vector2::Zero,
-		unsigned int sortingOrder = 0
+		unsigned int sortingOrder = 0,
+		const Vector2& position = Vector2::Zero
 	);
 	virtual ~Actor();
 
@@ -44,6 +45,9 @@ public:
 	// 문자열 길이 반환.
 	int Width() const;
 
+	// 문자열 높이 반환.
+	int Height() const;
+
 	// Sorting Order 설정.
 	void SetSortingOrder(unsigned int sortingOrder);
 
@@ -56,6 +60,9 @@ public:
 
 	// 액터의 이미지 값 변경 함수.
 	void ChangeImage(const char* newImage);
+
+	// 액터의 색상 값 변경 함수.
+	void ChangeColor(Color bg,Color color);
 
 	// 객체 삭제 함수.
 	void Destroy();

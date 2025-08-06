@@ -1,8 +1,6 @@
 #include "GameLevel.h"
 #include "Actor/Player.h"
 #include "Actor/Pipe.h"
-#include "Actor/PlayerBullet.h"
-#include "Actor/EnemyBullet.h"
 
 #include "Engine.h"
 
@@ -15,7 +13,7 @@
 static const char* numberType[] =
 {
 	// 0
-	"#####\n#   #\n#   #\n#   #\n#####",
+	"XXXXX\nX   X\nX   X\nX   X\nXXXXX",
 
 	// 1
 	"  #  \n###  \n  #  \n  #  \n#####",
@@ -45,15 +43,13 @@ static const char* numberType[] =
 	"#####\n#   #\n#####\n    #\n#####"
 };
 
-GameLevel::GameLevel()
+GameLevel::GameLevel(): FLOOR_Y(Engine::Get().Height() - 6),scorePositionFirst(Vector2(26, 5)), scorePositionSecond(Vector2(32, 5))
 {
-	// todo: 플레이어 저장해 둘 필요가 있는가?
-	Player* player = new Player(Vector2(21,19));
-	//playerWidth = player->Width();
-	AddActor(player);
+	SpawnPlayer();
 
 	// 타이머 설정.
-	enemySpawnTimer.SetTargetTime(0.1f);
+	pipeSpawnTimer.SetTargetTime(0.1f);
+	scoreMoveTimer.SetTargetTime(0.25f);
 }
 
 GameLevel::~GameLevel()
@@ -67,37 +63,43 @@ void GameLevel::BeginPlay()
 
 void GameLevel::Tick(float deltaTime)
 {
+	if (isCleared == true)
+	{
+		MoveScore(deltaTime);
+
+		if (player == nullptr)
+		{
+			return;
+		}
+		player = nullptr;
+		return;
+	}
+	
 	super::Tick(deltaTime);
 
 	// 적 생성.
 	SpawnEnemies(deltaTime);
 
-	// 플레이어 탄약과 적의 충돌 처리.
-	//ProcessCollisionPlayerBulletAndEnemy();
+	// 플레이어와 파이프 충돌 처리.
+	ProcessCollisionPlayer_Pipe();
+	ProcessCollisionPlayer_Floor();
+}
 
-	// 적의 탄약과 플레이어의 충돌 처리.
-	//ProcessCollisionPlayerAndEnemyBullet();
+void GameLevel::SpawnPlayer()
+{
+	player = new Player(Vector2(21, 19));
+	AddActor(player);
 }
 
 void GameLevel::SpawnEnemies(float deltaTime)
 {
 	// 적 생성.
-	enemySpawnTimer.Tick(deltaTime);
+	pipeSpawnTimer.Tick(deltaTime);
 
 	// 타임 아웃 확인.
-	if (!enemySpawnTimer.IsTimeout())
+	if (!pipeSpawnTimer.IsTimeout())
 	{
 		return;
-	}
-
-	// 타이머 정리.
-
-
-	// todo: 점수 더하기 로직
-	++score;
-	if (score == 100)
-	{
-		score = 99;
 	}
 
 	// 기둥 길이 랜덤으로 구하기. 최소 기둥길이는 2, 최대는 18
@@ -107,107 +109,103 @@ void GameLevel::SpawnEnemies(float deltaTime)
 	AddActor(new Pipe(ranLen, 0));	//윗기둥
 	AddActor(new Pipe(20 - ranLen, 1));	//아랫기둥
 
-	enemySpawnTimer.SetTargetTime(5.f);
-	enemySpawnTimer.Reset();
+
+	// 타이머 정리.
+	pipeSpawnTimer.SetTargetTime(5.f);
+	pipeSpawnTimer.Reset();
 	//enemySpawnTimer.SetTargetTime(1.f);
 }
 
-void GameLevel::ProcessCollisionPlayerBulletAndEnemy()
+void GameLevel::MoveScore(float deltaTime)
 {
-	// 플레이어 탄약 액터 배열.
-	std::vector<PlayerBullet*> bullets;
-	std::vector<Pipe*> enemies;
+	if (scorePositionFirst.y > 13)
+	{
+		return;
+	}
+	scoreMoveTimer.Tick(deltaTime);
 
-	// 두 타입의 액터를 검색해서 배열 채우기.
+	// 타임 아웃 확인.
+	if (!scoreMoveTimer.IsTimeout())
+	{
+		return;
+	}
+
+	++scorePositionFirst.y;
+	++scorePositionSecond.y;
+
+	scoreMoveTimer.Reset();
+}
+
+void GameLevel::ProcessCollisionPlayer_Pipe()
+{
+	// 파이프 컨테이너
+	std::vector<Pipe*> pipes;
+
+	// 모든 파이프 찾기
 	for (Actor* const actor : actors)
 	{
-		PlayerBullet* bullet = actor->As<PlayerBullet>();
-		if (bullet)
+		Pipe* pipe = actor->As<Pipe>();
+		if (pipe)
 		{
-			bullets.emplace_back(bullet);
-			continue;
-		}
-
-		Pipe* enemy = actor->As<Pipe>();
-		if (enemy)
-		{
-			enemies.emplace_back(enemy);
+			pipes.emplace_back(pipe);
 		}
 	}
 
 	// 예외처리 (안해도 상황 확인).
-	if (bullets.size() == 0 || enemies.size() == 0)
+	if (pipes.size() == 0)
 	{
 		return;
 	}
 
 	// 충돌 처리.
-	for (auto* bullet : bullets)
+	for (Pipe* pipe : pipes)
 	{
-		for (auto* enemy : enemies)
+		// 두 액터가 서로 겹쳤는지 확인.
+		if (player->TestIntersect(pipe))
 		{
-			// 두 액터가 서로 겹쳤는지 확인.
-			if (bullet->TestIntersect(enemy))
+			// 적에게 대미지 받았다고 알림.
+			player->OnDamaged();
+
+			// 게임 끝
+			isCleared = true;
+			break;
+		}
+
+		// todo: 한 쌍이 와서 중복해서 처리될텐데..
+		if (pipe->GetPassed() == false)
+		{
+			// player의 중앙이 파이프를 만나거나 지나면 점수 추가
+			if (player->Position().x + player->Width() / 2 < pipe->Position().x)
 			{
-				//enemy->Destroy();
-
-				// 적에게 대미지 받았다고 알림.
-				//enemy->OnDamaged();
-
-				// 플레이어 탄약 제거.
-				bullet->Destroy();
-
-				// 점수를 획득했기 때문에 점수 증가 처리해야 함.
-				score = score + 1;
 				continue;
 			}
+
+			// 점수 추가
+			++score;
+			if (score == 100)
+			{
+				//최대 99점
+				score = 99;
+			}
+
+			pipe->SetPassed(true);
 		}
 	}
+	
 }
 
-void GameLevel::ProcessCollisionPlayerAndEnemyBullet()
+void GameLevel::ProcessCollisionPlayer_Floor()
 {
-	Player* player = nullptr;
-	std::vector<EnemyBullet*> bullets;
-
-	for (Actor* const actor : actors)
-	{
-		// 적 탄약인지 확인 후 배열에 추가.
-		EnemyBullet* bullet = actor->As<EnemyBullet>();
-		if (bullet)
-		{
-			bullets.emplace_back(bullet);
-			continue;
-		}
-
-		// 플레이어 확인.
-		if (!player)
-		{
-			player = actor->As<Player>();
-		}
-	}
-
-	// 안해도 되는 상황 확인.
-	if (bullets.size() == 0 || !player)
+	if (player->Position().y + player->Height() - 1 < FLOOR_Y)		// Posy+height-1 < 34
 	{
 		return;
 	}
 
-	// 충돌 확인.
-	for (auto* bullet : bullets)
-	{
-		if (player->TestIntersect(bullet))
-		{
-			// 죽음 처리 (게임 종료).
-			isPlayerDead = true;
-			playerDeadPosition.x = player->Position().x + player->Width() / 2;
-			playerDeadPosition.y = player->Position().y;
+	// 적에게 대미지 받았다고 알림.
+	player->OnDamaged();
 
-			player->Destroy();
-			bullet->Destroy();
-			break;
-		}
-	}
+	// 게임 끝
+	isCleared = true;
 }
 
 void GameLevel::ShowGameScore()
@@ -221,8 +219,8 @@ void GameLevel::ShowGameScore()
 	// Score가 모든 애들 위에 그려짐.
 	for (int i{ 0 }; i < DIGIT_HEIGHT; ++i)
 	{
-		Engine::Get().WriteToBuffer(Vector2(26, 5), numberType[first], DIGIT_WIDTH, DIGIT_HEIGHT, Color::White, Color::None, 100);
-		Engine::Get().WriteToBuffer(Vector2(32, 5), numberType[second], DIGIT_WIDTH, DIGIT_HEIGHT, Color::White, Color::None, 100);
+		Engine::Get().WriteToBuffer(scorePositionFirst, numberType[first], DIGIT_WIDTH, DIGIT_HEIGHT, Color::White, Color::None, 100);
+		Engine::Get().WriteToBuffer(scorePositionSecond, numberType[second], DIGIT_WIDTH, DIGIT_HEIGHT, Color::White, Color::None, 100);
 	}
 }
 
@@ -230,30 +228,20 @@ void GameLevel::Render()
 {
 	super::Render();
 
-	//PrintMenu();
-
-	// todo: 게임 종료 시 처리.
-	if (isPlayerDead)
-	{
-		// 다음에 그릴 위치가 화면 밖을 넘어가지 않도록 보정.
-		// 아래 문자열 중에서 길이가 가장 긴 문자열을 기준으로 위치 보정.
-		int longestStringLength = (int)strlen("Game Over!");
-		int x = playerDeadPosition.x + longestStringLength > Engine::Get().Width() ?
-			Engine::Get().Width() - longestStringLength : playerDeadPosition.x;
-		int y = playerDeadPosition.y;
-		//Engine::Get().WriteToBuffer(Vector2(x, y - 3), "   .   ", Color::Red);
-		//Engine::Get().WriteToBuffer(Vector2(x, y - 2), " .  .  .", Color::Red);
-		//Engine::Get().WriteToBuffer(Vector2(x, y - 1), "..:V:..", Color::Red);
-		//Engine::Get().WriteToBuffer(Vector2(x, y), "Game Over!", Color::Red);
-
-
-		// 위에서 출력 요청한 글자를 바로 화면에 보이도록 함수 호출.
-		Engine::Get().PresentImmediately();
-
-		// 잠깐 정지(대략 2초).
-		Sleep(2000);
-		Engine::Get().Quit();
-	}
+	//	// 위에서 출력 요청한 글자를 바로 화면에 보이도록 함수 호출.
+	//	Engine::Get().PresentImmediately();
 
 	ShowGameScore();
+}
+
+void GameLevel::Reset()
+{
+	super::Reset();
+	pipeSpawnTimer.Reset();
+	pipeSpawnTimer.SetTargetTime(0.1f);
+	scoreMoveTimer.Reset();
+	scorePositionFirst = Vector2(26, 5);
+	scorePositionSecond = Vector2(32, 5);
+	score = 0;
+	SpawnPlayer();
 }

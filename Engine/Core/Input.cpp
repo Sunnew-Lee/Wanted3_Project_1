@@ -24,18 +24,34 @@ void Input::DispatchCallbacks()
 	// 키 눌림 이벤트 발행.
 	if (keydownCallbacks.size() > 0)
 	{
-		for (std::pair<const int, std::vector<Delegate>>& pair : keydownCallbacks)
+		for (int i{ 0 }; i < keydownCallbacks.size(); ++i)
 		{
-			// 키 눌림 확인.
-			if (GetKeyDown(pair.first))
+			// delegate가 부르는 함수 안에서 keydownCallbacks를 clear해버리기 때문에 항상 begin()부터 탐색으로 바꿈.
+			auto temp = keydownCallbacks.begin();
+			for (int j{ 0 }; j < i; ++j)
+				++temp;
+
+			if (GetKeyDown(temp->first))
 			{
 				// 키 눌림 이벤트가 발생한 경우, 콜백 함수 호출.
-				for (Delegate& delegate : pair.second)
+				for (Delegate& delegate : temp->second)
 				{
 					delegate();
 				}
 			}
 		}
+		//for (std::pair<const int, std::vector<Delegate>>& pair : keydownCallbacks)
+		//{
+		//	// 키 눌림 확인.
+		//	if (GetKeyDown(temp.first))
+		//	{
+		//		// 키 눌림 이벤트가 발생한 경우, 콜백 함수 호출.
+		//		for (Delegate& delegate : temp.second)
+		//		{
+ 	//				delegate();
+		//		}
+		//	}
+		//}
 	}
 
 	// 키 눌림 해제 이벤트 발행.
@@ -50,6 +66,10 @@ void Input::DispatchCallbacks()
 				for (Delegate& delegate : pair.second)
 				{
 					delegate();
+					if (keyupCallbacks.empty())
+					{
+						break;
+					}
 				}
 			}
 		}
@@ -67,6 +87,10 @@ void Input::DispatchCallbacks()
 				for (Delegate& delegate : pair.second)
 				{
 					delegate();
+					if (keyrepeatCallbacks.empty())
+					{
+						break;
+					}
 				}
 			}
 		}
@@ -101,4 +125,11 @@ bool Input::GetKeyUp(int keyCode)
 Input& Input::Get()
 {
 	return *instance;
+}
+
+void Input::Clear()
+{
+	keydownCallbacks.clear();
+	keyupCallbacks.clear();
+	keyrepeatCallbacks.clear();
 }

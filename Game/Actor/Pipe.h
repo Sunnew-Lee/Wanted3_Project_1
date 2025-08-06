@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Actor/Actor.h"
-#include "Utils/Timer.h"
+#include "Timer.h"
 
 /*
 * 이동 패턴 (좌우).
@@ -22,6 +22,8 @@ public:
 
 	// 플레이어 탄약에 맞았을 때 호출할 함수.
 	//void OnDamaged();
+	bool GetPassed() const;
+	void SetPassed(bool set);
 
 private:
 	void MakePipe(int len, int dir);
@@ -35,6 +37,7 @@ private:
 	// 타이머.
 	Timer moveTimer;
 	static constexpr int PIPE_WIDTH{ 9 };
+	bool isPassed{ false };
 	// 타이머 계산을 위한 변수.
 	// 경과 시간 계산 변수.
 	//float elapsedTime = 0.0f;

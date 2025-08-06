@@ -6,4 +6,5 @@ class Game : public Engine
 {
 public:
 	Game();
+	void Restart();
 };

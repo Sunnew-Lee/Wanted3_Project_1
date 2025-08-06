@@ -1,4 +1,5 @@
 #pragma once
+#include "Core.h"
 
 /*
 * 작성자: 장세윤. 2025.07.31
@@ -7,9 +8,11 @@
 * - 예: 3초가 지났는지 등을 확인 할 때 사용함.
 */
 
-class Timer
+class Engine_API Timer
 {
 public:
+	friend class Engine;
+
 	Timer(float targetTime = 0.0f);
 
 	// 초시계의 시간이 흘러가도록 하기 위해 필요함.

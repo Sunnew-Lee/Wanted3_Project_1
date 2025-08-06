@@ -4,6 +4,7 @@
 #include "Input.h"
 #include "Math/Color.h"
 #include "Math/Vector2.h"
+#include "Timer.h"
 
 #include <Windows.h>
 
@@ -112,6 +113,8 @@ protected:
 	// 배경 버퍼로 글자 버퍼 덮어쓰는 함수.
 	void SetImageBuffer();
 
+	void Restart();
+
 
 protected:
 	// 엔진 종료 플래그.
@@ -126,6 +129,15 @@ protected:
 	// 엔진 설정.
 	EngineSettings settings;
 
+	Timer cloudTimer;
+	Timer grassTimer;
+	Timer floorTimer;
+
+	// 배경 루프 변수
+	int cloudOffset{ 1 };
+	int grassOffset{ 1 };
+	int floorOffset{ 1 };
+
 
 	// 백버퍼(프레임).
 	//CHAR_INFO* imageBuffer = nullptr;
@@ -134,9 +146,6 @@ protected:
 
 	// 파일 입출력 배경 저장 버퍼.
 	ImageBuffer* bgBuffer = nullptr;
-
-	// 배경 루프 변수
-	int offSet{ 1 };
 	
 	// 이중 버퍼.
 	ScreenBuffer* renderTargets[2] = { };

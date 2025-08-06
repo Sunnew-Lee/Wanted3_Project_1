@@ -2,35 +2,33 @@
 #include "Utils/Utils.h"
 #include "Engine.h"
 #include "Level/Level.h"
-#include "Actor/EnemyBullet.h"
-#include "Actor/EnemyDestroyEffect.h"
 
-//todo: Up기둥 Down기둥. 생성할때 지정하면 여기서 처리.
 // 점수 표시에 사용할 글자 값.
 // 여기에서 static은 private임.
 static const char* pipeConstants[] =
 {
 	// 기둥 한칸
-	"|||||||||\n",	//10
+	"|)))    |\n",	//10
 	// 마무리
-	"|||||||||",	//9
+	"|)))    |",	//9
 
 	// 기둥 머리 반드시 두칸.
-	"---------\n---------\n",	//20
+	"=========\n---------\n",	//20
 	//마무리
-	"---------\n---------"		//19
+	"---------\n========="		//19
 };
 
-Pipe::Pipe(int length, int dir) :Actor("i",PIPE_WIDTH,length+2, Color::IRed, Color::Red, 1)
+Pipe::Pipe(int length, int dir) :Actor(nullptr, PIPE_WIDTH, length + 2, Color::IGreen, Color::Green, 1)
 {
+	// 이미지 만들어서 Actor의 image에 넣어줌
 	MakePipe(length, dir);
-	
+
 	// 기둥은 늘 오른쪽에서 출력
 	position.x = Engine::Get().Width() - 1;
 	position.y = (dir == 0 ? 0 : Engine::Get().Height() - 6 - length - 2);	// 진디 위부터 시작(6), 기둥길이(length), 머리 길이(2)
 
 	// 타이머 설정.
-	moveTimer.SetTargetTime(0.1f);
+	moveTimer.SetTargetTime(0.05f);
 }
 
 void Pipe::Tick(float deltaTime)
@@ -65,6 +63,16 @@ void Pipe::Tick(float deltaTime)
 void Pipe::OnDestroy()
 {
 	super::OnDestroy();
+}
+
+bool Pipe::GetPassed() const
+{
+	return isPassed;
+}
+
+void Pipe::SetPassed(bool set)
+{
+	isPassed = set;
 }
 
 void Pipe::MakePipe(int len, int dir)
@@ -106,8 +114,3 @@ void Pipe::MakePipe(int len, int dir)
 
 	//Actor::Actor(temp, PIPE_WIDTH, len + 2, Color::IRed, Color::Red);
 }
-
-//void Pipe::OnDamaged()
-//{
-//	// todo: 이거 처리할꺼임? 기둥은 데미지 안입는거 아닐까?
-//}

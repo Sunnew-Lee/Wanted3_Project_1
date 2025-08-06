@@ -66,6 +66,31 @@ Engine::Engine()
 
 	// cls 호출.
 	system("cls");
+
+	// 타이머 설정
+	cloudTimer.SetTargetTime(1.3f);
+	grassTimer.SetTargetTime(0.5f);
+	floorTimer.SetTargetTime(0.05f);
+
+	//cloudOffset{ 1 };
+	//grassOffset{ 1 };
+	//floorOffset{ 1 };
+}
+
+void Engine::Restart()
+{
+	Input::Get().Clear();
+	mainLevel->Reset();
+
+	//bg timer reset
+	cloudTimer.Reset();
+	grassTimer.Reset();
+	floorTimer.Reset();
+	
+	//bg offset reset
+	//cloudOffset = 1;
+	//grassOffset = 1;
+	//floorOffset = 1;
 }
 
 Engine::~Engine()
@@ -279,6 +304,15 @@ void Engine::BeginPlay()
 
 void Engine::Tick(float deltaTime)
 {
+	// 타이머 업데이트
+	cloudTimer.Tick(deltaTime);
+	if (mainLevel->GetisCleared())
+	{
+		return;
+	}
+	grassTimer.Tick(deltaTime);
+	floorTimer.Tick(deltaTime);
+
 	// 레벨 업데이트.
 	if (mainLevel)
 	{
@@ -446,8 +480,8 @@ void Engine::LoadBgBuffer()
 			break;
 
 		case '$':
-			buffer.Char.AsciiChar = ' ';
-			buffer.Attributes = Utils::SetColor(Color::IGreen);
+			buffer.Char.AsciiChar = '#';
+			buffer.Attributes = Utils::SetColor(Color::IGreen, Color::Green);
 			break;
 
 		case '^':
@@ -459,11 +493,6 @@ void Engine::LoadBgBuffer()
 			buffer.Char.AsciiChar = '/';
 			buffer.Attributes = 
 				Utils::SetColor(Color::IGreen);
-			break;
-			//todo: ( 대체하기
-		case '(':
-			buffer.Char.AsciiChar = '(';
-			buffer.Attributes = Utils::SetColor(Color::IRed,Color::Red);
 			break;
 
 		case '#':
@@ -487,7 +516,6 @@ void Engine::LoadBgBuffer()
 	fclose(file);
 }
 
-//todo: timer for bg
 void Engine::SetImageBuffer()
 {
 	// 1. imageBuffer의 모든 픽셀(x, y)을 순회합니다.
@@ -495,18 +523,20 @@ void Engine::SetImageBuffer()
 	{
 		for (int x = 0; x < settings.width; ++x)
 		{
-			int sourceX; // 원본 bgBuffer에서 가져올 X좌표
+			int sourceX = x; // 원본 bgBuffer에서 가져올 X좌표
 
-			// 2. 현재 y좌표가 35인지 확인합니다.
-			if (y == 35)
+			// 스크롤 효과 적용
+			if (y == 26 || y == 27 || y == 28 || y == 29)
 			{
-				// y가 35일 때만 스크롤 효과를 적용합니다.
-				sourceX = (x + offSet) % settings.width;
+				sourceX = (x + cloudOffset) % settings.width;
 			}
-			else
+			else if (y == 31 || y == 32)
 			{
-				// 나머지 줄은 스크롤 없이 그대로 복사합니다.
-				sourceX = x;
+				sourceX = (x + grassOffset) % settings.width;
+			}
+			else if (y == 35)
+			{
+				sourceX = (x + floorOffset) % settings.width;
 			}
 
 			// 3. 목적지와 소스의 1차원 인덱스를 계산합니다.
@@ -520,5 +550,20 @@ void Engine::SetImageBuffer()
 	}
 
 	//5. 다음 프레임을 위해 오프셋을 1 증가시킵니다.
-	offSet = (offSet + 1) % settings.width;
+
+	if (cloudTimer.IsTimeout())
+	{
+		cloudOffset = (cloudOffset + 1) % settings.width;
+		cloudTimer.Reset();
+	}
+	if (grassTimer.IsTimeout())
+	{
+		grassOffset = (grassOffset + 1) % settings.width;
+		grassTimer.Reset();
+	}
+	if (floorTimer.IsTimeout())
+	{
+		floorOffset = (floorOffset + 1) % settings.width;
+		floorTimer.Reset();
+	}	
 }

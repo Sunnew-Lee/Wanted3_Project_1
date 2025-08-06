@@ -109,6 +109,7 @@ public:
 		keyrepeatCallbacks[keyCode].emplace_back(delegate);
 	}
 
+	void Clear();
 private:
 	void ProcessInput();
 	void DispatchCallbacks();
