@@ -7,10 +7,18 @@ class Player : public Actor
 {
 	RTTI_DECLARATIONS(Player, Actor)
 public:
-	//Player(float fireInterval = 0.15f, FireMode fireMode = FireMode::OneShot);
+	enum class State : int
+	{
+		IDLE,
+		UP,
+		DOWN,
+		DEAD
+	};
+
 	Player(Vector2 pos);
 	virtual void Tick(float deltaTime) override;
 	void OnDamaged();
+	bool DidStart();
 
 private:
 
@@ -20,9 +28,9 @@ private:
 	// 게임 종료 함수.
 	void Quit();
 
+	void SetState(float vel);
 
 private:
-	// todo: 플레이어 죽으면 주르륵 타이머?
 	float yPosition = 0.0f;
 	float yVelocity = 0.0f;
 	static constexpr float JUMP_STRENGTH{ 6.5f };
@@ -30,4 +38,6 @@ private:
 
 	bool didStart{ false };
 	bool isDead{ false };
+	State prevState{ State::IDLE };
+	State currState{ State::IDLE };
 };

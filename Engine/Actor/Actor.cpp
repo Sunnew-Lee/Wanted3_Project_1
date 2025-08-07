@@ -98,7 +98,7 @@ Level* Actor::GetOwner()
 	return owner;
 }
 
-bool Actor::TestIntersect(const Actor* const other)
+bool Actor::TestIntersect(const Actor* const other, Vector2& pos)
 {
 	// AABB(Axis Aligned Bounding Box).
 
@@ -115,8 +115,9 @@ bool Actor::TestIntersect(const Actor* const other)
 	int other_bottom = other->position.y + other->height - 1;
 
 	//위로 넘어가는거 방지
-	if (other_top == 0 && bottom < other_top)
+	if (other_top == 0 && bottom < other_top && !(right < other_left || left > other_right))
 	{
+		pos = Vector2(right - 3, top);
 		return true;
 	}
 
@@ -128,6 +129,28 @@ bool Actor::TestIntersect(const Actor* const other)
 	}
 
 	// y 좌표가 같은지 최종 확인.
+	if (left < other_left)	//좌 충돌
+	{
+		if (other_top == 0)
+			pos = Vector2(right-3, top);
+
+		else
+			pos = Vector2(right-3, bottom);
+	}
+	else if (right > other_right)	//우 충돌
+	{
+		if (other_top == 0)
+			pos = Vector2(left, top);
+		else
+			pos = Vector2(left, bottom);
+	}
+	else
+	{
+		if (other_top == 0)
+			pos = Vector2(right - width / 2 , top);
+		else
+			pos = Vector2(right - width / 2 , bottom);
+	}
 	return true;
 }
 

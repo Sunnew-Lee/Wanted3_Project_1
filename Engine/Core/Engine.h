@@ -19,6 +19,9 @@ struct EngineSettings
 
 	// 타겟 프레임 속도.
 	float framerate = 0.0f;
+
+	// 폰트 사이즈
+	int fontsize = 0;
 };
 
 // 뎊스 정보까지 저장할 수 있는 이미지 버퍼 구조체.
@@ -63,7 +66,7 @@ public:
 
 	// 문자열 그리기 요청 함수.
 	void WriteToBuffer(
-		const Vector2& position, const char* image, int width, int height, Color bg = Color::None, Color color = Color::White, int sortingOrder = 0);
+		const Vector2& position, const char* image, int width, int height, Color bg = Color::None, Color color = Color::White, int sortingOrder = 0, bool transparent = false);
 
 	// 버퍼를 곧바로 교환 요청할 때 사용하는 함수.
 	void PresentImmediately();
@@ -112,6 +115,8 @@ protected:
 
 	// 배경 버퍼로 글자 버퍼 덮어쓰는 함수.
 	void SetImageBuffer();
+
+	void SetFont();
 
 	void Restart();
 

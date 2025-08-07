@@ -163,6 +163,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Actor\PlayerDestroyEffect.cpp" />
     <ClCompile Include="Actor\Pipe.cpp" />
     <ClCompile Include="Actor\Player.cpp" />
     <ClCompile Include="Game\Game.cpp" />
@@ -170,6 +171,7 @@
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Actor\PlayerDestroyEffect.h" />
     <ClInclude Include="Actor\Pipe.h" />
     <ClInclude Include="Actor\Player.h" />
     <ClInclude Include="Game\Game.h" />

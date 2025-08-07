@@ -3,14 +3,14 @@
 #include "Engine.h"
 #include "Level/Level.h"
 
-// 점수 표시에 사용할 글자 값.
+// 기둥 표현에 사용할 글자 값.
 // 여기에서 static은 private임.
 static const char* pipeConstants[] =
 {
 	// 기둥 한칸
-	"|)))    |\n",	//10
+	"|     ))|\n",	//10
 	// 마무리
-	"|)))    |",	//9
+	"|     ))|",	//9
 
 	// 기둥 머리 반드시 두칸.
 	"=========\n---------\n",	//20
@@ -25,10 +25,11 @@ Pipe::Pipe(int length, int dir) :Actor(nullptr, PIPE_WIDTH, length + 2, Color::I
 
 	// 기둥은 늘 오른쪽에서 출력
 	position.x = Engine::Get().Width() - 1;
-	position.y = (dir == 0 ? 0 : Engine::Get().Height() - 6 - length - 2);	// 진디 위부터 시작(6), 기둥길이(length), 머리 길이(2)
+	position.y = (dir == 0 ? 0 : Engine::Get().Height() - 6 - length - 2);	// 잔디 위부터 시작(6), 기둥길이(length), 머리 길이(2)
 
 	// 타이머 설정.
 	moveTimer.SetTargetTime(0.05f);
+	direction = (dir == 0) ? Dir::DOWNWARD : Dir::UPWARD;
 }
 
 void Pipe::Tick(float deltaTime)
@@ -59,12 +60,6 @@ void Pipe::Tick(float deltaTime)
 	moveTimer.Reset();
 }
 
-// todo: ???
-void Pipe::OnDestroy()
-{
-	super::OnDestroy();
-}
-
 bool Pipe::GetPassed() const
 {
 	return isPassed;
@@ -73,6 +68,11 @@ bool Pipe::GetPassed() const
 void Pipe::SetPassed(bool set)
 {
 	isPassed = set;
+}
+
+int Pipe::GetDir() const
+{
+	return static_cast<int>(direction);
 }
 
 void Pipe::MakePipe(int len, int dir)

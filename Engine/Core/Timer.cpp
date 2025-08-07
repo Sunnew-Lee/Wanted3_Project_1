@@ -23,5 +23,8 @@ bool Timer::IsTimeout() const
 
 void Timer::SetTargetTime(float newTargetTime)
 {
+    if (targetTime == newTargetTime)
+        return;
+
     targetTime = newTargetTime;
 }

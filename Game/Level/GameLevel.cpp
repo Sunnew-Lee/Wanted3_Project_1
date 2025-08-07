@@ -1,6 +1,7 @@
 #include "GameLevel.h"
 #include "Actor/Player.h"
 #include "Actor/Pipe.h"
+#include "Actor/PlayerDestroyEffect.h"
 
 #include "Engine.h"
 
@@ -13,7 +14,7 @@
 static const char* numberType[] =
 {
 	// 0
-	"XXXXX\nX   X\nX   X\nX   X\nXXXXX",
+	"#####\n#   #\n#   #\n#   #\n#####",
 
 	// 1
 	"  #  \n###  \n  #  \n  #  \n#####",
@@ -43,13 +44,13 @@ static const char* numberType[] =
 	"#####\n#   #\n#####\n    #\n#####"
 };
 
-GameLevel::GameLevel(): FLOOR_Y(Engine::Get().Height() - 6),scorePositionFirst(Vector2(26, 5)), scorePositionSecond(Vector2(32, 5))
+GameLevel::GameLevel() : FLOOR_Y(Engine::Get().Height() - 6), scorePosition{ Vector2(26, 5) , Vector2(32, 5) }
 {
 	SpawnPlayer();
 
 	// 타이머 설정.
 	pipeSpawnTimer.SetTargetTime(0.1f);
-	scoreMoveTimer.SetTargetTime(0.25f);
+	scoreMoveTimer.SetTargetTime(0.2f);
 }
 
 GameLevel::~GameLevel()
@@ -63,15 +64,23 @@ void GameLevel::BeginPlay()
 
 void GameLevel::Tick(float deltaTime)
 {
+	if (player->DidStart() == false)
+	{
+		return;
+	}
 	if (isCleared == true)
 	{
 		MoveScore(deltaTime);
+		//tick dead
+		if(PDE)
+			PDE->Tick(deltaTime);
 
-		if (player == nullptr)
-		{
-			return;
-		}
-		player = nullptr;
+		//if (player == nullptr)
+		//{
+		//	return;
+		//}
+
+		//player = nullptr;
 		return;
 	}
 	
@@ -81,8 +90,8 @@ void GameLevel::Tick(float deltaTime)
 	SpawnEnemies(deltaTime);
 
 	// 플레이어와 파이프 충돌 처리.
-	ProcessCollisionPlayer_Pipe();
 	ProcessCollisionPlayer_Floor();
+	ProcessCollisionPlayer_Pipe();
 }
 
 void GameLevel::SpawnPlayer()
@@ -103,22 +112,22 @@ void GameLevel::SpawnEnemies(float deltaTime)
 	}
 
 	// 기둥 길이 랜덤으로 구하기. 최소 기둥길이는 2, 최대는 18
-	int ranLen = Utils::Random(2, 18);
+	int ranLen = Utils::Random(2, 20);
 
 	// 기둥 생성.
 	AddActor(new Pipe(ranLen, 0));	//윗기둥
-	AddActor(new Pipe(20 - ranLen, 1));	//아랫기둥
+	AddActor(new Pipe(22 - ranLen, 1));	//아랫기둥
 
 
 	// 타이머 정리.
-	pipeSpawnTimer.SetTargetTime(5.f);
+	pipeSpawnTimer.SetTargetTime(1.75f);
 	pipeSpawnTimer.Reset();
 	//enemySpawnTimer.SetTargetTime(1.f);
 }
 
 void GameLevel::MoveScore(float deltaTime)
 {
-	if (scorePositionFirst.y > 13)
+	if (scorePosition[0].y > 12)
 	{
 		return;
 	}
@@ -130,8 +139,8 @@ void GameLevel::MoveScore(float deltaTime)
 		return;
 	}
 
-	++scorePositionFirst.y;
-	++scorePositionSecond.y;
+	++scorePosition[0].y;
+	++scorePosition[1].y;
 
 	scoreMoveTimer.Reset();
 }
@@ -161,17 +170,23 @@ void GameLevel::ProcessCollisionPlayer_Pipe()
 	for (Pipe* pipe : pipes)
 	{
 		// 두 액터가 서로 겹쳤는지 확인.
-		if (player->TestIntersect(pipe))
+		if (player->TestIntersect(pipe, deadPosition))
 		{
-			// 적에게 대미지 받았다고 알림.
-			player->OnDamaged();
+			player->Destroy();
+
+			// 새로운 액터 생성해서 이 자리에서 주르르륵 떨어지게
+			// add dead
+			PDE = new PlayerDestroyEffect(deadPosition);
+			AddActor(PDE);
 
 			// 게임 끝
 			isCleared = true;
+
+			// todo: 꼬름한 슬립
+			Sleep(200);
 			break;
 		}
 
-		// todo: 한 쌍이 와서 중복해서 처리될텐데..
 		if (pipe->GetPassed() == false)
 		{
 			// player의 중앙이 파이프를 만나거나 지나면 점수 추가
@@ -180,15 +195,20 @@ void GameLevel::ProcessCollisionPlayer_Pipe()
 				continue;
 			}
 
-			// 점수 추가
-			++score;
-			if (score == 100)
+			//중앙 지난 상태
+			pipe->SetPassed(true);
+
+			// Downward 파이프만 점수 올려준다
+			if (checkDir != pipe->GetDir())
 			{
-				//최대 99점
-				score = 99;
+				continue;
 			}
 
-			pipe->SetPassed(true);
+			// 점수 추가
+			if (score < 99)
+			{
+				++score;
+			}			
 		}
 	}
 	
@@ -219,8 +239,8 @@ void GameLevel::ShowGameScore()
 	// Score가 모든 애들 위에 그려짐.
 	for (int i{ 0 }; i < DIGIT_HEIGHT; ++i)
 	{
-		Engine::Get().WriteToBuffer(scorePositionFirst, numberType[first], DIGIT_WIDTH, DIGIT_HEIGHT, Color::White, Color::None, 100);
-		Engine::Get().WriteToBuffer(scorePositionSecond, numberType[second], DIGIT_WIDTH, DIGIT_HEIGHT, Color::White, Color::None, 100);
+		Engine::Get().WriteToBuffer(scorePosition[0], numberType[first], DIGIT_WIDTH, DIGIT_HEIGHT, Color::White, Color::None, 100,true);
+		Engine::Get().WriteToBuffer(scorePosition[1], numberType[second], DIGIT_WIDTH, DIGIT_HEIGHT, Color::White, Color::None, 100, true);
 	}
 }
 
@@ -240,8 +260,9 @@ void GameLevel::Reset()
 	pipeSpawnTimer.Reset();
 	pipeSpawnTimer.SetTargetTime(0.1f);
 	scoreMoveTimer.Reset();
-	scorePositionFirst = Vector2(26, 5);
-	scorePositionSecond = Vector2(32, 5);
+	scorePosition[0] = Vector2(26, 5);
+	scorePosition[1] = Vector2(32, 5);
 	score = 0;
 	SpawnPlayer();
+	PDE = nullptr;
 }

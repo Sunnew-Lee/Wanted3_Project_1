@@ -1,6 +1,7 @@
 #include "Engine.h"
 #include <iostream>
-#include <Windows.h>
+#include <chrono>
+//#include <Windows.h>
 
 #include "Level/Level.h"
 #include "Utils/Utils.h"
@@ -57,6 +58,7 @@ Engine::Engine()
 	// 두 개의 버퍼 생성.
 	renderTargets[0] = new ScreenBuffer(GetStdHandle(STD_OUTPUT_HANDLE), screenSize);
 	renderTargets[1] = new ScreenBuffer(screenSize);
+	SetFont();
 
 	// 버퍼 교환.
 	Present();
@@ -100,17 +102,19 @@ Engine::~Engine()
 
 void Engine::Run()
 {
-	// 밀리 세컨드 단위로 현재 시간을 알려줌.
-	//float currentTime = timeGetTime();
-	LARGE_INTEGER currentTime;
-	LARGE_INTEGER previousTime;
-	QueryPerformanceCounter(&currentTime);
-	previousTime = currentTime;
+	//// 밀리 세컨드 단위로 현재 시간을 알려줌.
+	////float currentTime = timeGetTime();
+	//LARGE_INTEGER currentTime;
+	//LARGE_INTEGER previousTime;
+	//QueryPerformanceCounter(&currentTime);
+	//previousTime = currentTime;
 
-	// 하드웨어 시계의 정밀도(주파수) 가져오기.
-	// 나중에 초로 변환하기 위해.
-	LARGE_INTEGER frequency;
-	QueryPerformanceFrequency(&frequency);
+	//// 하드웨어 시계의 정밀도(주파수) 가져오기.
+	//// 나중에 초로 변환하기 위해.
+	//LARGE_INTEGER frequency;
+	//QueryPerformanceFrequency(&frequency);
+	std::chrono::system_clock::time_point currentTime = std::chrono::system_clock::now();
+	std::chrono::system_clock::time_point previousTime = currentTime;
 
 	// 타겟 프레임.
 	float targetFrameRate 
@@ -131,12 +135,14 @@ void Engine::Run()
 
 		// 프레임 시간 계산.
 		// (현재 시간 - 이전 시간) / 주파수 = 초단위.
-		QueryPerformanceCounter(&currentTime);
+		//QueryPerformanceCounter(&currentTime);
+		currentTime = std::chrono::system_clock::now();
 
 		// 프레임 시간.
-		float deltaTime = 
-			(currentTime.QuadPart - previousTime.QuadPart)
-			/ (float)frequency.QuadPart;
+		//float deltaTime = 
+		//	(currentTime.QuadPart - previousTime.QuadPart)
+		//	/ (float)frequency.QuadPart;
+		float deltaTime = std::chrono::duration<float>(currentTime - previousTime).count();
 
 		// 입력은 최대한 빨리.
 		input.ProcessInput();
@@ -174,7 +180,8 @@ void Engine::WriteToBuffer(
 	int width, int height,
 	Color bg,
 	Color color,
-	int sortingOrder)
+	int sortingOrder,
+	bool transparent)
 {
 	//int length = static_cast<int>(strlen(image));
 
@@ -228,15 +235,23 @@ void Engine::WriteToBuffer(
 			}
 
 			// 뎁스 테스트
-			if (imageBuffer->sortingOrderArray[destIndex] > sortingOrder)
+			if (imageBuffer->sortingOrderArray[destIndex] > sortingOrder)// todo: transparent?
 			{
 				continue;
 			}
-
-			// 원본 이미지에서 올바른 문자를 직접 읽어와 버퍼에 기록
-			imageBuffer->charInfoArray[destIndex].Char.AsciiChar = image[(width + 1) * y + sourceStartIndex + i];
-			imageBuffer->charInfoArray[destIndex].Attributes = Utils::SetColor(bg, color);
+			
 			imageBuffer->sortingOrderArray[destIndex] = sortingOrder;
+
+			//todo: 
+			if (transparent && (image[(width + 1) * y + sourceStartIndex + i] == ' '))
+			{
+				//imageBuffer->charInfoArray[destIndex].Attributes &= Utils::SetColor(Color::White, color);
+				//imageBuffer->charInfoArray[destIndex].Char.AsciiChar;
+				continue;
+			}
+
+			imageBuffer->charInfoArray[destIndex].Attributes = Utils::SetColor(bg, color);
+			imageBuffer->charInfoArray[destIndex].Char.AsciiChar = image[(width + 1) * y + sourceStartIndex + i];	
 		}
 	}
 }
@@ -306,18 +321,22 @@ void Engine::Tick(float deltaTime)
 {
 	// 타이머 업데이트
 	cloudTimer.Tick(deltaTime);
-	if (mainLevel->GetisCleared())
+
+	if (mainLevel != nullptr)
 	{
-		return;
+		mainLevel->Tick(deltaTime);
+
+		if (mainLevel->GetisCleared())
+		{
+			return;
+		}
 	}
+
 	grassTimer.Tick(deltaTime);
 	floorTimer.Tick(deltaTime);
 
 	// 레벨 업데이트.
-	if (mainLevel)
-	{
-		mainLevel->Tick(deltaTime);
-	}
+
 }
 
 void Engine::Clear()
@@ -367,7 +386,7 @@ void Engine::LoadEngineSettings()
 {
 	// 엔진 설정 파일 열기.
 	FILE* file = nullptr;
-	fopen_s(&file, "../Settings/EngineSettings.txt", "rt");
+	fopen_s(&file, "../Settings/EngineSettings.bin", "rt");
 	if (file == nullptr)
 	{
 		std::cout << "Failed to load engine settings.\n";
@@ -422,6 +441,10 @@ void Engine::LoadEngineSettings()
 		{
 			sscanf_s(token, "height = %d", &settings.height);
 		}
+		else if (strcmp(header, "fontsize") == 0)
+		{
+			sscanf_s(token, "fontsize = %d", &settings.fontsize);
+		}
 
 		// 그 다음줄 분리.
 		token = strtok_s(nullptr, "\n", &context);
@@ -444,7 +467,7 @@ void Engine::LoadBgBuffer()
 {
 	FILE* file = nullptr;
 
-	fopen_s(&file, "../Assets/BG.txt", "rt");
+	fopen_s(&file, "../Assets/BG.bin", "rt");
 	if (file == nullptr)
 	{
 		std::cout << "BG Open Failed\n";
@@ -481,7 +504,7 @@ void Engine::LoadBgBuffer()
 
 		case '$':
 			buffer.Char.AsciiChar = '#';
-			buffer.Attributes = Utils::SetColor(Color::IGreen, Color::Green);
+			buffer.Attributes = Utils::SetColor(Color::Green, Color::IGreen);
 			break;
 
 		case '^':
@@ -490,13 +513,13 @@ void Engine::LoadBgBuffer()
 			break;
 
 		case '/':
-			buffer.Char.AsciiChar = '/';
+			buffer.Char.AsciiChar = '#';
 			buffer.Attributes = 
 				Utils::SetColor(Color::IGreen);
 			break;
 
 		case '#':
-			buffer.Char.AsciiChar = '/';
+			buffer.Char.AsciiChar = '#';
 			buffer.Attributes = Utils::SetColor(Color::Green);
 			break;
 
@@ -566,4 +589,41 @@ void Engine::SetImageBuffer()
 		floorOffset = (floorOffset + 1) % settings.width;
 		floorTimer.Reset();
 	}	
+}
+
+void Engine::SetFont()
+{
+	CONSOLE_FONT_INFOEX cfi;
+	cfi.cbSize = sizeof(cfi); // ★★★ 매우 중요: 구조체 크기를 반드시 먼저 설정해야 합니다.
+
+	// 3. 현재 콘솔의 폰트 정보를 가져옵니다.
+	for (int i{ 0 }; i < 2; i++)
+	{
+		if (!GetCurrentConsoleFontEx(renderTargets[i]->buffer, FALSE, &cfi))
+		{
+			std::cout << "현재 폰트 정보를 가져오는 데 실패했습니다!" << std::endl;
+			__debugbreak();
+		}
+	}
+
+	// 4. 원하는 값으로 폰트 정보를 수정합니다.
+	//   - 글자 높이(크기)를 변경
+	settings.fontsize = settings.fontsize == 0 ? 16 : settings.fontsize;
+	cfi.dwFontSize.Y = settings.fontsize;
+	cfi.FontWeight = 600;
+
+	//   - (선택사항) 글꼴 이름을 'Consolas'로 변경
+	//     폰트 이름은 와이드 문자열(L"...")로 지정해야 합니다.
+	//wcscpy_s(cfi.FaceName, L"Consolas");
+
+	// 5. 수정된 폰트 정보로 새로 설정합니다.
+	for (int i{ 0 }; i < 2; i++)
+	{
+		if (!SetCurrentConsoleFontEx(renderTargets[i]->buffer, FALSE, &cfi))
+		{
+			std::cout << "폰트 정보를 설정하는 데 실패했습니다!" << std::endl;
+			__debugbreak();
+		}
+	}
+
 }

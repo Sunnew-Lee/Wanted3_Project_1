@@ -67,18 +67,6 @@ ScreenBuffer::ScreenBuffer(HANDLE console, const Vector2& screenSize)
 	CONSOLE_CURSOR_INFO cursorInfo{ 1, FALSE };
 	SetConsoleCursorInfo(buffer, &cursorInfo);
 
-	//CONSOLE_FONT_INFOEX cfi;
-	//BOOL b = GetCurrentConsoleFontEx(buffer, FALSE, &cfi);
-	////cfi.dwFontSize.X/=2;
-	//cfi.dwFontSize.Y/=2;
-	//BOOL a = SetCurrentConsoleFontEx(buffer, FALSE, &cfi);
-	//if (!a)
-	//{
-	//	std::cout << "폰트 정보 설정 실패!" << std::endl;
-	//	return ;
-	//}
-	
-
 	// 1. 콘솔 윈도우 핸들(HWND)을 가져옵니다.
 //    (버퍼를 제어하는 HANDLE과 다른, 창 자체를 가리키는 핸들입니다.)
 	HWND consoleWindow = GetConsoleWindow();
